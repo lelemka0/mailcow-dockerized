@@ -489,8 +489,8 @@ else
   echo -e "\e[33mCannot determine current git repository version...\e[0m"
 fi
 
-if [[ "${CONTAINER_ENGINE}" == "podman" ]]; then
-    echo -e "\e[31mPatching docker-compose.yml for usage with Podman.\e[0m"
-    bash ./patch-docker-compose-for-podman.sh
-fi
+#if [[ "${CONTAINER_ENGINE}" == "podman" ]]; then
+#    echo -e "\e[31mPatching docker-compose.yml for usage with Podman.\e[0m"
+#    bash ./patch-docker-compose-for-podman.sh
+#fi
 
