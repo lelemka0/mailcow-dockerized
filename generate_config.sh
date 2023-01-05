@@ -21,11 +21,24 @@ if grep --help 2>&1 | head -n 1 | grep -q -i "busybox"; then echo "BusyBox grep 
 if cp --help 2>&1 | head -n 1 | grep -q -i "busybox"; then echo "BusyBox cp detected, please install coreutils, \"apk add --no-cache --upgrade coreutils\""; exit 1; fi
 if sed --help 2>&1 | head -n 1 | grep -q -i "busybox"; then echo "BusyBox sed detected, please install gnu sed, \"apk add --no-cache --upgrade sed\""; exit 1; fi
 
-for bin in openssl curl docker git awk sha1sum; do
+if command -v docker > /dev/null 2>&1; then
+    CONTAINER_ENGINE="docker"
+    echo -e "\e[32mFound Docker container engine.\e[0m"
+elif command -v podman > /dev/null 2>&1; then
+    CONTAINER_ENGINE="podman"
+    echo -e "\e[32mFound Podman container engine.\e[0m"
+else
+    echo "Cannot find container engine (Docker or Podman), exiting..."
+    exit 1
+fi
+
+for bin in openssl curl git awk sha1sum; do
   if [[ -z $(which ${bin}) ]]; then echo "Cannot find ${bin}, exiting..."; exit 1; fi
 done
 
-if docker compose > /dev/null 2>&1; then
+DOCKER_COMPOSE_V2=${DOCKER_COMPOSE_V2:-"docker-compose"}
+
+if [[ "${CONTAINER_ENGINE}" == "docker" ]] && docker compose > /dev/null 2>&1; then
     if docker compose version --short | grep "^2." > /dev/null 2>&1; then
       COMPOSE_VERSION=native
       echo -e "\e[31mFound Docker Compose Plugin (native).\e[0m"
@@ -37,9 +50,9 @@ if docker compose > /dev/null 2>&1; then
       echo -e "\e[31mPlease update/install it manually regarding to this doc site: https://mailcow.github.io/mailcow-dockerized-docs/i_u_m/i_u_m_install/\e[0m"
       exit 1
     fi
-elif docker-compose > /dev/null 2>&1; then
-  if ! [[ $(alias docker-compose 2> /dev/null) ]] ; then
-    if docker-compose version --short | grep "^2." > /dev/null 2>&1; then
+elif $DOCKER_COMPOSE_V2 > /dev/null 2>&1; then
+  if ! [[ $(alias $DOCKER_COMPOSE_V2 2> /dev/null) ]] ; then
+    if $DOCKER_COMPOSE_V2 version --short | grep "^2." > /dev/null 2>&1; then
       COMPOSE_VERSION=standalone
       echo -e "\e[31mFound Docker Compose Standalone.\e[0m"
       echo -e "\e[31mSetting the DOCKER_COMPOSE_VERSION Variable to standalone\e[0m"
@@ -163,6 +176,15 @@ git checkout -f $git_branch
 
 [ ! -f ./data/conf/rspamd/override.d/worker-controller-password.inc ] && echo '# Placeholder' > ./data/conf/rspamd/override.d/worker-controller-password.inc
 
+if [[ "${CONTAINER_ENGINE}" == "podman" ]]; then
+    echo -e "\e[33mSetting HTTP_BIND and HTTPS_BIND to 127.0.0.1, change them where necessary...\e[0m"
+    MAILCOW_HTTP_BIND="127.0.0.1"
+    MAILCOW_HTTPS_BIND="127.0.0.1"
+else
+    MAILCOW_HTTP_BIND=""
+    MAILCOW_HTTPS_BIND=""
+fi
+
 cat << EOF > mailcow.conf
 # ------------------------------
 # mailcow web ui configuration
@@ -204,10 +226,10 @@ DBROOT=$(LC_ALL=C </dev/urandom tr -dc A-Za-z0-9 | head -c 28)
 # For IPv6 see https://mailcow.github.io/mailcow-dockerized-docs/post_installation/firststeps-ip_bindings/
 
 HTTP_PORT=80
-HTTP_BIND=
+HTTP_BIND=${MAILCOW_HTTP_BIND}
 
 HTTPS_PORT=443
-HTTPS_BIND=
+HTTPS_BIND=${MAILCOW_HTTPS_BIND}
 
 # ------------------------------
 # Other bindings
@@ -466,3 +488,9 @@ else
   echo '?>' >> data/web/inc/app_info.inc.php
   echo -e "\e[33mCannot determine current git repository version...\e[0m"
 fi
+
+if [[ "${CONTAINER_ENGINE}" == "podman" ]]; then
+    echo -e "\e[31mPatching docker-compose.yml for usage with Podman.\e[0m"
+    bash ./patch-docker-compose-for-podman.sh
+fi
+
