@@ -24,8 +24,8 @@ services:
         - unbound-mailcow
       stop_grace_period: 45s
       volumes:
-        - mysql-vol-1:/var/lib/mysql/
-        - mysql-socket-vol-1:/var/run/mysqld/
+        - ${MAIL_STORAGE_DIR}/mysql:/var/lib/mysql/
+        - ${MAIL_STORAGE_DIR}/mysql-socket:/var/run/mysqld/
         - ./data/conf/mysql/:/etc/mysql/conf.d/:ro
       environment:
         - TZ=${TZ}
@@ -47,7 +47,7 @@ services:
     redis-mailcow:
       image: redis:7-alpine
       volumes:
-        - redis-vol-1:/data/
+        - ${MAIL_STORAGE_DIR}/redis:/data/
       restart: always
       ports:
         - "${REDIS_PORT:-127.0.0.1:7654}:6379"
@@ -75,7 +75,7 @@ services:
         - SKIP_CLAMD=${SKIP_CLAMD:-n}
       volumes:
         - ./data/conf/clamav/:/etc/clamav/
-        - clamd-db-vol-1:/var/lib/clamav
+        - ${MAIL_STORAGE_DIR}/clamd-db:/var/lib/clamav
       security_opt:
         - label=disable
       networks:
@@ -103,7 +103,7 @@ services:
         - ./data/conf/rspamd/lua/:/etc/rspamd/lua/:ro
         - ./data/conf/rspamd/rspamd.conf.local:/etc/rspamd/rspamd.conf.local
         - ./data/conf/rspamd/rspamd.conf.override:/etc/rspamd/rspamd.conf.override
-        - rspamd-vol-1:/var/lib/rspamd
+        - ${MAIL_STORAGE_DIR}/rspamd:/var/lib/rspamd
       restart: always
       hostname: rspamd
       #dns:
@@ -125,8 +125,8 @@ services:
         - ./data/web:/web
         - ./data/conf/rspamd/dynmaps:/dynmaps:ro
         - ./data/conf/rspamd/custom/:/rspamd_custom_maps
-        - rspamd-vol-1:/var/lib/rspamd
-        - mysql-socket-vol-1:/var/run/mysqld/
+        - ${MAIL_STORAGE_DIR}/rspamd:/var/lib/rspamd
+        - ${MAIL_STORAGE_DIR}/mysql-socket:/var/run/mysqld/
         - ./data/conf/sogo/:/etc/sogo/
         - ./data/conf/rspamd/meta_exporter:/meta_exporter:ro
         - ./data/conf/phpfpm/sogo-sso/:/etc/sogo-sso/
@@ -207,9 +207,9 @@ services:
         - ./data/conf/sogo/custom-favicon.ico:/usr/lib/GNUstep/SOGo/WebServerResources/img/sogo.ico
         - ./data/conf/sogo/custom-theme.js:/usr/lib/GNUstep/SOGo/WebServerResources/js/theme.js
         - ./data/conf/sogo/custom-sogo.js:/usr/lib/GNUstep/SOGo/WebServerResources/js/custom-sogo.js
-        - mysql-socket-vol-1:/var/run/mysqld/
-        - sogo-web-vol-1:/sogo_web
-        - sogo-userdata-backup-vol-1:/sogo_backup
+        - ${MAIL_STORAGE_DIR}/mysql-socket:/var/run/mysqld/
+        - ${MAIL_STORAGE_DIR}/sogo-web:/sogo_web
+        - ${MAIL_STORAGE_DIR}/sogo-userdata-backup:/sogo_backup
       labels:
         ofelia.enabled: "true"
         ofelia.job-exec.sogo_sessions.schedule: "@every 1m"
@@ -243,13 +243,13 @@ services:
         - ./data/assets/ssl:/etc/ssl/mail/:ro
         - ./data/conf/sogo/:/etc/sogo/
         - ./data/conf/phpfpm/sogo-sso/:/etc/phpfpm/
-        - vmail-vol-1:/var/vmail
-        - vmail-index-vol-1:/var/vmail_index
-        - crypt-vol-1:/mail_crypt/
+        - ${MAIL_STORAGE_DIR}/vmail:/var/vmail
+        - ${MAIL_STORAGE_DIR}/vmail-index:/var/vmail_index
+        - ${MAIL_STORAGE_DIR}/crypt:/mail_crypt/
         - ./data/conf/rspamd/custom/:/etc/rspamd/custom
         - ./data/assets/templates:/templates
-        - rspamd-vol-1:/var/lib/rspamd
-        - mysql-socket-vol-1:/var/run/mysqld/
+        - ${MAIL_STORAGE_DIR}/rspamd:/var/lib/rspamd
+        - ${MAIL_STORAGE_DIR}/mysql-socket:/var/run/mysqld/
       environment:
         - DOVECOT_MASTER_USER=${DOVECOT_MASTER_USER:-}
         - DOVECOT_MASTER_PASS=${DOVECOT_MASTER_PASS:-}
@@ -319,10 +319,10 @@ services:
         - ./data/hooks/postfix:/hooks
         - ./data/conf/postfix:/opt/postfix/conf
         - ./data/assets/ssl:/etc/ssl/mail/:ro
-        - postfix-vol-1:/var/spool/postfix
-        - crypt-vol-1:/var/lib/zeyple
-        - rspamd-vol-1:/var/lib/rspamd
-        - mysql-socket-vol-1:/var/run/mysqld/
+        - ${MAIL_STORAGE_DIR}/postfix:/var/spool/postfix
+        - ${MAIL_STORAGE_DIR}/crypt:/var/lib/zeyple
+        - ${MAIL_STORAGE_DIR}/rspamd:/var/lib/rspamd
+        - ${MAIL_STORAGE_DIR}/mysql-socket:/var/run/mysqld/
       environment:
         - LOG_LINES=${LOG_LINES:-9999}
         - TZ=${TZ}
@@ -396,7 +396,7 @@ services:
         - ./data/assets/ssl/:/etc/ssl/mail/:ro
         - ./data/conf/nginx/:/etc/nginx/conf.d/
         - ./data/conf/rspamd/meta_exporter:/meta_exporter:ro
-        - sogo-web-vol-1:/usr/lib/GNUstep/SOGo/
+        - ${MAIL_STORAGE_DIR}/sogo-web:/usr/lib/GNUstep/SOGo/
       ports:
         - "${HTTPS_BIND:-}:${HTTPS_PORT:-443}:${HTTPS_PORT:-443}"
         - "${HTTP_BIND:-}:${HTTP_PORT:-80}:${HTTP_PORT:-80}"
@@ -439,7 +439,7 @@ services:
         - ./data/web/.well-known/acme-challenge:/var/www/acme
         - ./data/assets/ssl:/var/lib/acme/
         - ./data/assets/ssl-example:/var/lib/ssl-example/:ro
-        - mysql-socket-vol-1:/var/run/mysqld/
+        - ${MAIL_STORAGE_DIR}/mysql-socket:/var/run/mysqld/
       restart: always
       security_opt:
         - label=disable
@@ -480,9 +480,9 @@ services:
       tmpfs:
         - /tmp
       volumes:
-        - rspamd-vol-1:/var/lib/rspamd
-        - mysql-socket-vol-1:/var/run/mysqld/
-        - postfix-vol-1:/var/spool/postfix
+        - ${MAIL_STORAGE_DIR}/rspamd:/var/lib/rspamd
+        - ${MAIL_STORAGE_DIR}/mysql-socket:/var/run/mysqld/
+        - ${MAIL_STORAGE_DIR}/postfix:/var/spool/postfix
         - ./data/assets/ssl:/etc/ssl/mail/:ro
       restart: always
       environment:
@@ -561,7 +561,7 @@ services:
       image: mailcow/solr:1.8.1
       restart: always
       volumes:
-        - solr-vol-1:/opt/solr/server/solr/dovecot-fts/data
+        - ${MAIL_STORAGE_DIR}/solr:/opt/solr/server/solr/dovecot-fts/data
       ports:
         - "${SOLR_PORT:-127.0.0.1:18983}:8983"
       environment:
@@ -663,16 +663,3 @@ networks:
         - subnet: ${IPV4_NETWORK:-172.22.1}.0/24
         #- subnet: ${IPV6_NETWORK:-fd4d:6169:6c63:6f77::/64}
 
-volumes:
-  vmail-vol-1:
-  vmail-index-vol-1:
-  mysql-vol-1:
-  mysql-socket-vol-1:
-  redis-vol-1:
-  rspamd-vol-1:
-  solr-vol-1:
-  postfix-vol-1:
-  crypt-vol-1:
-  sogo-web-vol-1:
-  sogo-userdata-backup-vol-1:
-  clamd-db-vol-1:

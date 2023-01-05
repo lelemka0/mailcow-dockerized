@@ -200,6 +200,8 @@ MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
 # see https://mailcow.github.io/mailcow-dockerized-docs/models/model-passwd/
 MAILCOW_PASS_SCHEME=BLF-CRYPT
 
+MAIL_STORAGE_DIR=${MAILCOW_STORAGE_DIR:-./storage}
+
 # ------------------------------
 # SQL database configuration
 # ------------------------------
