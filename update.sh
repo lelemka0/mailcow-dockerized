@@ -311,8 +311,12 @@ while (($#)); do
       echo -e "\e[32mRunning in forced mode...\e[0m"
       FORCE=y
     ;;
+    -d|--dev)
+      echo -e "\e[32mRunning in Developer mode...\e[0m"
+      DEV=y
+    ;;
     --help|-h)
-    echo './update.sh [-c|--check, --ours, --gc, --nightly, --prefetch, --skip-start, --skip-ping-check, --stable, -f|--force, -h|--help]
+    echo './update.sh [-c|--check, --ours, --gc, --nightly, --prefetch, --skip-start, --skip-ping-check, --stable, -f|--force, -d|--dev, -h|--help]
 
   -c|--check           -   Check for updates and exit (exit codes => 0: update available, 3: no updates)
   --ours               -   Use merge strategy option "ours" to solve conflicts in favor of non-mailcow code (local changes over remote changes), not recommended!
@@ -323,6 +327,7 @@ while (($#)); do
   --skip-ping-check    -   Skip ICMP Check to public DNS resolvers (Use it only if you´ve blocked any ICMP Connections to your mailcow machine)
   --stable             -   Switch your mailcow updates to the stable (master) branch. Default unless you changed it with --nightly.
   -f|--force           -   Force update, do not ask questions
+  -d|--dev             -   Enables Developer Mode (No Checkout of update.sh for tests)
 '
     exit 1
   esac
@@ -614,7 +619,7 @@ for option in ${CONFIG_ARRAY[@]}; do
       echo "Adding new option \"${option}\" to mailcow.conf"
       echo '# Password hash algorithm' >> mailcow.conf
       echo '# Only certain password hash algorithm are supported. For a fully list of supported schemes,' >> mailcow.conf
-      echo '# see https://mailcow.github.io/mailcow-dockerized-docs/models/model-passwd/' >> mailcow.conf
+      echo '# see https://docs.mailcow.email/models/model-passwd/' >> mailcow.conf
       echo "MAILCOW_PASS_SCHEME=BLF-CRYPT" >> mailcow.conf
     fi
   elif [[ ${option} == "ADDITIONAL_SERVER_NAMES" ]]; then
@@ -636,7 +641,7 @@ for option in ${CONFIG_ARRAY[@]}; do
       echo '# Optional: Leave empty for none' >> mailcow.conf
       echo '# This value is only used on first order!' >> mailcow.conf
       echo '# Setting it at a later point will require the following steps:' >> mailcow.conf
-      echo '# https://mailcow.github.io/mailcow-dockerized-docs/troubleshooting/debug-reset_tls/' >> mailcow.conf
+      echo '# https://docs.mailcow.email/troubleshooting/debug-reset_tls/' >> mailcow.conf
       echo 'ACME_CONTACT=' >> mailcow.conf
   fi
   elif [[ ${option} == "WEBAUTHN_ONLY_TRUSTED_VENDORS" ]]; then
@@ -754,15 +759,17 @@ elif [ $NEW_BRANCH == "nightly" ] && [ $CURRENT_BRANCH != "nightly" ]; then
   git checkout -f ${BRANCH}
 fi
 
-echo -e "\e[32mChecking for newer update script...\e[0m"
-SHA1_1=$(sha1sum update.sh)
-git fetch origin #${BRANCH}
-git checkout origin/${BRANCH} update.sh
-SHA1_2=$(sha1sum update.sh)
-if [[ ${SHA1_1} != ${SHA1_2} ]]; then
-  echo "update.sh changed, please run this script again, exiting."
-  chmod +x update.sh
-  exit 2
+if [ ! $DEV ]; then
+  echo -e "\e[32mChecking for newer update script...\e[0m"
+  SHA1_1=$(sha1sum update.sh)
+  git fetch origin #${BRANCH}
+  git checkout origin/${BRANCH} update.sh
+  SHA1_2=$(sha1sum update.sh)
+  if [[ ${SHA1_1} != ${SHA1_2} ]]; then
+    echo "update.sh changed, please run this script again, exiting."
+    chmod +x update.sh
+    exit 2
+  fi
 fi
 
 if [ ! $FORCE ]; then
@@ -943,9 +950,6 @@ else
   echo '?>' >> data/web/inc/app_info.inc.php
   echo -e "\e[33mCannot determine current git repository version...\e[0m"
 fi
-
-# Set DOCKER_COMPOSE_VERSION
-sed -i 's/^DOCKER_COMPOSE_VERSION=$/DOCKER_COMPOSE_VERSION='$DOCKER_COMPOSE_VERSION'/g' mailcow.conf
 
 if [[ ${SKIP_START} == "y" ]]; then
   echo -e "\e[33mNot starting mailcow, please run \"./mailcow-compose.sh up -d --remove-orphans\" to start mailcow.\e[0m"
